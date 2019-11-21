@@ -1,0 +1,71 @@
+---
+title: "practical machine learning course project"
+author: "Lie Li"
+date: "November 21, 2019"
+output: html_document
+---
+
+Data downloading and understanding the data
+
+```{r}
+url <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+download.file(url, destfile = "pml-training.csv")
+trainingOri = read.csv("pml-training.csv",na.strings=c("NA","","#DIV/0!"))
+url2 <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+download.file(url2, destfile = "pml-testing.csv")
+testingOri = read.csv("pml-testing.csv")
+dim(trainingOri)
+dim(testingOri)
+```
+Data cleasing,remove N/A Value
+```{r}
+trainingRemoveNA <- trainingOri[, colSums(is.na(trainingOri)) == 0]
+testingRemoveNA <- testingOri[, colSums(is.na(testingOri)) == 0] 
+dim(trainingRemoveNA)
+dim(testingRemoveNA)
+```
+Data cleasing,remove column 1-7 which are not relavant to the modeling
+```{r}
+trainingRemoveNACol   <-trainingRemoveNA[,-c(1:7)]
+testingRemoveNACo   <-testingRemoveNA[,-c(1:7)]
+dim(trainingRemoveNACol)
+dim(testingRemoveNACo)
+str(trainingRemoveNACol)
+str(testingRemoveNACo)
+```
+Data partitioning
+```{r}
+library(caret)
+library(rpart)
+library(randomForest)
+library(gbm)
+inTrain <- createDataPartition(trainingRemoveNACol$classe, p=0.7, list=FALSE)
+training <- trainingRemoveNACol[inTrain,]
+testing <- trainingRemoveNACol[-inTrain,]
+dim(training)
+dim(testing)
+```
+Dicision tree model
+```{r}
+modfitDT <- train(classe ~ ., data = training, method="rpart")
+predictionDT <- predict(modfitDT, testing)
+confusionMatrix(predictionDT, testing$classe)
+```
+Random forest model
+```{r}
+modfitRF <- train(classe ~ ., data = training, method = "rf", ntree = 100)
+predictionRF <- predict(modfitRF, testing)
+confusionMatrix(predictionRF, testing$classe)
+```
+Boosting model
+```{r}
+modfitGbm <- train(classe ~ ., data = training, method = "gbm", verbose = FALSE)
+modfitGbm$finalModel
+predictionGbm <- predict(modfitGbm, testing)
+confusionMatrix(predictionGbm, testing$classe)
+```
+Apply the best model RF on the test dataset
+```{r}
+finalPredictionRF <- predict(modfitRF,testingRemoveNACo  )
+finalPredictionRF
+```
